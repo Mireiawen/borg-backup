@@ -1,41 +1,59 @@
-FROM "bitnami/minideb:stretch"
+ARG borgbackup_version="1.1.11"
 
-MAINTAINER "Mira Liikanen <mir@mireiawen.net>"
+# Download the binary
+FROM "bitnami/minideb:buster" AS downloader
+ARG borgbackup_version
+RUN install_packages \
+	"curl" \
+	"ca-certificates"
 
-# Write the backports list file for current codename
-RUN \
-	echo "deb http://ftp.debian.org/debian stretch-backports main" \
-		>"/etc/apt/sources.list.d/backports.list" 
+RUN curl --silent --show-error --location \
+	--output "/usr/bin/borg" \
+	"https://github.com/borgbackup/borg/releases/download/${borgbackup_version}/borg-linux64"
 
-# Install the Borg backup itself
-RUN \
-	install_packages \
-		-t "stretch-backports" \
-		"borgbackup"
+RUN chmod "+x" "/usr/bin/borg"
 
-# Install the SSH server
-RUN \
-	install_packages \
-		"openssh-server" && \
-	mkdir "/run/sshd"
+# Create the actual container
+FROM "bitnami/minideb:buster"
+ARG borgbackup_version
+
+# Add the labels for the image
+LABEL name="borg-backup"
+LABEL summary="Docker Container for the BorgBackup to be used as backup server"
+LABEL maintainer="Mira 'Mireiawen' Manninen"
+LABEL version="${borgbackup_version}"
+
 
 # Set up the backup user
-RUN \
-	useradd \
-		--create-home \
-		--user-group \
-		--shell "/bin/bash" \
-		--comment "Backup User" \
-		"borgbackup" && \
-	ln -s "/home/borgbackup" "/backups"
+RUN useradd \
+	--create-home \
+	--user-group \
+	--shell "/bin/bash" \
+	--comment "Backup User" \
+	"borgbackup"
+
+RUN ln --symbolic \
+	"/home/borgbackup" \
+	"/backups"
+
+# Install the SSH server
+RUN install_packages \
+	"openssh-server"
+
+RUN mkdir "/run/sshd"
+
+# Install the actual backup
+COPY --from=downloader \
+	"/usr/bin/borg" \
+	"/usr/bin/borg"
 
 # Define the directory volumes
 VOLUME [ "/home/borgbackup" ]
+
+# Expose the SSH port
+EXPOSE 22
 
 # Set the entry point
 COPY "start.sh" "/start.sh"
 ENTRYPOINT [ "/bin/bash" ]
 CMD [ "/start.sh" ]
-
-# Expose the SSH port
-EXPOSE 22

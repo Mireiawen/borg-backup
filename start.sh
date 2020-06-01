@@ -12,8 +12,7 @@ then
 	chown "borgbackup:" "/home/borgbackup/.ssh/authorized_keys"
 	echo "User SSH key is set."
 else
-	echo "No user SSH key is given, unless the volume is mounted and"
-	echo "contains working SSH configuration, no access is allowed!"
+	echo "No user SSH key is given, unless the volume is mounted and contains working SSH configuration, no access is allowed!"
 fi
 
 # Launch the SSHD daemon
