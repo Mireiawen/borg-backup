@@ -23,7 +23,6 @@ LABEL summary="Docker Container for the BorgBackup to be used as backup server"
 LABEL maintainer="Mira 'Mireiawen' Manninen"
 LABEL version="${borgbackup_version}"
 
-
 # Set up the backup user
 RUN useradd \
 	--create-home \
